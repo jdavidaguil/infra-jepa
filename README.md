@@ -71,11 +71,11 @@ The notebook will:
 
 **t-SNE of latent space** — anomalies (red markers) sit at structural boundaries between clusters:
 
-![t-SNE](assets/tsne.png)
+![t-SNE](t-sne.png)
 
 **Training loss** — total loss converges cleanly; SIGReg stabilizes the latent space:
 
-![Training Loss](assets/training_loss.png)
+![Training Loss](Prediction_loss.png)
 
 ---
 
