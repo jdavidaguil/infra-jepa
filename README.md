@@ -67,7 +67,7 @@ The notebook will:
 
 **Anomaly surprise scores** — 5 transitions flagged above threshold on real production data:
 
-![Anomaly Scores](assets/anomaly_scores.png)
+![Anomaly Scores](Anomaly_scores.png)
 
 **t-SNE of latent space** — anomalies (red markers) sit at structural boundaries between clusters:
 
