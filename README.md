@@ -67,15 +67,15 @@ The notebook will:
 
 **Anomaly surprise scores** — 5 transitions flagged above threshold on real production data:
 
-![Anomaly Scores](Anomaly_scores.png)
+![Anomaly Scores](assets/anomaly_scores.png)
 
 **t-SNE of latent space** — anomalies (red markers) sit at structural boundaries between clusters:
 
-![t-SNE](t-sne.png)
+![t-SNE](assets/t-sne.png)
 
 **Training loss** — total loss converges cleanly; SIGReg stabilizes the latent space:
 
-![Training Loss](Prediction_Loss.png)
+![Training Loss](assets/prediction_loss.png)
 
 ---
 
