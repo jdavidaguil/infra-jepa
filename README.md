@@ -4,7 +4,7 @@
 
 Trains a world model on real production microservice traces and surfaces anomalies as high-surprise state transitions — without rules, thresholds, or labeled data.
 
-[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/YOUR_GITHUB_USERNAME/infra-jepa/blob/main/infra_jepa_colab.ipynb)
+[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/jdavidaguil/infra-jepa/blob/main/infra_jepa_colab.ipynb)
 
 ---
 
