@@ -75,7 +75,7 @@ The notebook will:
 
 **Training loss** — total loss converges cleanly; SIGReg stabilizes the latent space:
 
-![Training Loss](Prediction_loss.png)
+![Training Loss](Prediction_Loss.png)
 
 ---
 
