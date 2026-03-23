@@ -16,9 +16,10 @@ infra-jepa asks a different question: *given the current state of the infrastruc
 
 The gap between predicted and actual latent state is the anomaly signal. No rules. No labeled incidents. A learned sense of normal.
 
-**On real Alibaba production data (16,364 microservices, 18,554 call edges per window):**
+**On real Alibaba production data (600 × 5-min snapshots, avg 242 microservices and 305 call edges per window):**
 - 599 transitions scored
 - 5 anomalies detected, including two consecutive flagged windows indicating a real infra event
+- Final prediction loss: 0.0092
 - Latent space shows clear temporal structure — anomalies sit at cluster boundaries
 
 ---
