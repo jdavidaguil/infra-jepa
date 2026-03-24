@@ -1,26 +1,39 @@
 # infra-jepa
 
-**JEPA-inspired anomaly detection for microservice infrastructure graphs.**
+**What if your infrastructure could tell you what it didn't expect?**
 
-Trains a world model on real production microservice traces and surfaces anomalies as high-surprise state transitions — without rules, thresholds, or labeled data.
+Most observability tools are built around a simple premise: define what failure looks like, set a threshold, alert when it's crossed. It's a reasonable approach — with a fundamental blind spot. It can only find the failures you anticipated.
+
+This project explores a different question entirely.
+
+Inspired by [LeWorldModel](https://le-wm.github.io/) (Maes, Le Lidec, LeCun et al., 2026), infra-jepa applies a Joint Embedding Predictive Architecture to infrastructure graphs. The model learns what normal infra transitions look like — and measures surprise when reality diverges from expectation. No rules. No manually defined failure modes. A learned sense of normal.
 
 [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/jdavidaguil/infra-jepa/blob/main/infra_jepa_colab.ipynb)
 
 ---
 
-## What it does
+## What it found
 
-Most observability tools tell you what's broken after the fact.
+Tested on Alibaba's public microservice trace 2022. Real production data. 600 five-minute snapshots across two days. 16,000+ unique services.
 
-infra-jepa asks a different question: *given the current state of the infrastructure graph, what should happen next — and how surprised am I when it doesn't?*
+**5 anomalies detected out of 599 transitions scored.**
 
-The gap between predicted and actual latent state is the anomaly signal. No rules. No labeled incidents. A learned sense of normal.
+The two highest-scoring events had the same structural fingerprint:
+- 130+ services churned in a single 5-minute window
+- 200+ call edges reshuffled simultaneously
+- CPU normal. Memory normal. Surface latency normal.
 
-**On real Alibaba production data (600 × 5-min snapshots, avg 242 microservices and 305 call edges per window):**
-- 599 transitions scored
-- 5 anomalies detected, including two consecutive flagged windows indicating a real infra event
-- Final prediction loss: 0.0092
-- Latent space shows clear temporal structure — anomalies sit at cluster boundaries
+Traditional monitoring sees nothing there. The anomaly is in the *shape* of the dependency graph — which services were talking to which, which had appeared, which had vanished.
+
+**Then we cross-referenced with response time data the model never trained on.**
+
+Every flagged window showed elevated p95 latency compared to its neighbors. The clearest example: three consecutive windows at a steady 28ms p95, the anomaly window at 38.9ms, then immediately back to normal. Two independent signals pointing at the same windows.
+
+![Anomaly Scores](assets/anomaly_scores.png)
+*Surprise scores across 599 transitions. Red bars are structural topology events — invisible to CPU, memory, and latency monitors.*
+
+![t-SNE](assets/t-sne.png)
+*t-SNE of infra graph embeddings. Anomalies (red markers) sit at structural boundaries between clusters.*
 
 ---
 
@@ -41,58 +54,70 @@ MSCallGraph + MSResource
 ```
 
 - **Encoder**: 2-layer GraphSAGE + global mean pooling → 32-D embedding per snapshot
-- **Predictor**: 2-layer MLP with residual connection
-- **SIGReg**: Gaussian regularizer from [LeWorldModel](https://le-wm.github.io/) — prevents representation collapse with a single loss term
+- **Predictor**: 2-layer MLP with residual connection — learns infra dynamics in latent space
+- **SIGReg**: Gaussian regularizer from LeWM — prevents representation collapse with a single loss term. Replaces 5+ loss terms from prior approaches.
 - **Anomaly score**: L2 distance between predicted and actual next embedding
 
 ---
 
 ## Quickstart
 
-No local setup needed. Run entirely in Google Colab:
+No local setup needed. Runs entirely in Google Colab on a free T4 GPU.
 
 1. Click the **Open in Colab** badge above
 2. Set runtime to **T4 GPU** (Runtime → Change runtime type)
-3. Run all cells
+3. Run all cells — about 15 minutes end to end
 
 The notebook will:
 - Download real Alibaba Microservice Trace 2022 data directly (~570MB)
 - Build graph snapshots at 5-minute intervals
-- Train the JEPA model (100 epochs, ~2 min on T4)
+- Train the JEPA model (100 epochs)
 - Score anomalies and produce visualizations
+- Run structural diagnosis on flagged transitions
 
 ---
 
-## Results
+## Run summary
 
-**Anomaly surprise scores** — 5 transitions flagged above threshold on real production data:
-
-![Anomaly Scores](assets/anomaly_scores.png)
-
-**t-SNE of latent space** — anomalies (red markers) sit at structural boundaries between clusters:
-
-![t-SNE](assets/t-sne.png)
-
-**Training loss** — total loss converges cleanly; SIGReg stabilizes the latent space:
-
-![Training Loss](assets/prediction_loss.png)
+| Metric | Value |
+|---|---|
+| Dataset | Alibaba Microservice Trace 2022 |
+| Snapshots | 600 × 5-min windows |
+| Avg nodes / snapshot | 242 microservices |
+| Avg edges / snapshot | 305 call edges |
+| Final prediction loss | 0.0092 |
+| Transitions scored | 599 |
+| Anomalies detected | 5 |
+| Threshold | mean + 3σ = 1.228 |
 
 ---
 
 ## Dataset
 
-[Alibaba Microservice Trace 2022](https://github.com/alibaba/clusterdata/tree/master/cluster-trace-microservices-v2022) — publicly available production cluster traces from Alibaba.
+[Alibaba Microservice Trace 2022](https://github.com/alibaba/clusterdata/tree/master/cluster-trace-microservices-v2022) — publicly available production cluster traces.
 
-| Table | Description |
-|---|---|
-| MSCallGraph | Service-to-service call edges + latency |
-| MSResource | Per-service CPU and memory utilization |
+| Table | Description | Size (compressed) |
+|---|---|---|
+| MSCallGraph | Service-to-service call edges + latency | ~212MB / hour |
+| MSResource | Per-service CPU and memory utilization | ~355MB / hour |
+
+---
+
+## Honest scope
+
+This is one experiment on one public dataset. There is no ground truth — we cannot confirm the flagged transitions were real incidents. What we can say is that two independent signals (structural topology change + latency elevation) pointed at the same windows. That's a meaningful result worth pursuing further.
+
+Open questions:
+- Were these incidents or scheduled maintenance events?
+- How does the signal hold at larger scale?
+- What's the right snapshot granularity for different infra types?
+- How does precision/recall look with labeled data?
 
 ---
 
 ## Inspiration
 
-- **LeWorldModel** (Maes, Le Lidec, LeCun et al., 2026) — stable end-to-end JEPA from pixels using SIGReg. [Paper](https://arxiv.org/pdf/2603.19312v1) · [Site](https://le-wm.github.io/)
+- **LeWorldModel** (Maes, Le Lidec, LeCun et al., 2026) — stable end-to-end JEPA using SIGReg. [Paper](https://arxiv.org/pdf/2603.19312v1) · [Site](https://le-wm.github.io/)
 - **GraphSAGE** (Hamilton et al., 2017) — inductive representation learning on large graphs
 - **JEPA** (LeCun, 2022) — A path towards autonomous machine intelligence
 
@@ -100,7 +125,7 @@ The notebook will:
 
 ## Connection to Infragraph
 
-This experiment is a direct proof of concept for [Infragraph](#) — a project building graph-based intelligence for infrastructure systems. The core thesis: infrastructure should have a world model, not just a dashboard.
+This experiment is a proof of concept for [Infragraph](#) — a project building graph-based intelligence for infrastructure systems. The core thesis: infrastructure should have a world model, not just a dashboard.
 
 ---
 
